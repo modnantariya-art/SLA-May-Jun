@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SLA Dashboard — ศูนย์กระจายสินค้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --accent:#1f5fb0;
+  --bg:#f8fafb;
+  --surface:#ffffff;
+  --surface-2:#f3f6f9;
+  --surface-3:#eaeef3;
+  --border:#dde3ea;
+  --border-strong:#c4ccd6;
+  --text:#2b3340;
+  --muted:#6a737f;
+  --faint:#9099a3;
+  --pass:#15935f;
+  --warn:#c1881a;
+  --fail:#d23b34;
+  --pass-bg:#e3f5ec;
+  --warn-bg:#f8eed6;
+  --fail-bg:#fbe6e3;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 1px 2px rgba(43,51,64,0.06),0 4px 16px rgba(43,51,64,0.05);
+  --pad:22px;
+  --font-th:"IBM Plex Sans Thai","IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+html[data-density="compact"]{--pad:15px;}
+html[data-density="comfy"]{--pad:30px;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+.muted{color:var(--muted);}
+.status-text-pass{color:var(--pass);}
+.status-text-warn{color:#a8740f;}
+.status-text-fail{color:var(--fail);}
+
+.app{min-height:100vh;display:flex;flex-direction:column;}
+.content{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:28px var(--pad) 56px;}
+
+/* topbar */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(250,251,252,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+.topbar-inner{max-width:1200px;margin:0 auto;padding:14px var(--pad);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-mark{width:42px;height:42px;border-radius:10px;background:var(--accent);color:#fff;font-family:var(--font-mono);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-title{font-weight:600;font-size:17px;letter-spacing:-.01em;white-space:nowrap;}
+.brand-sub{font-size:12.5px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.period{text-align:right;display:flex;flex-direction:column;gap:1px;}
+.period-label{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;}
+.period-val{font-weight:600;font-size:15px;}
+.period-arrow{color:var(--accent);margin:0 2px;}
+.refresh-btn{appearance:none;border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);font-family:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s;}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-icon{font-size:14px;display:inline-block;}
+.refresh-icon.spinning{animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.last-updated{font-size:11.5px;color:var(--faint);}
+
+/* tabs */
+.tabs{max-width:1200px;margin:0 auto;padding:0 var(--pad);display:flex;gap:4px;}
+.tab{appearance:none;border:none;background:none;cursor:pointer;font-family:inherit;padding:12px 18px 13px;display:flex;flex-direction:column;align-items:center;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.tab-th{font-weight:600;font-size:15px;white-space:nowrap;}
+.tab:hover{color:var(--text);}
+.tab-on{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* section head */
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+.section-title{font-size:21px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
+.section-desc{margin:0;color:var(--muted);font-size:13.5px;max-width:60ch;}
+.trend-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+
+/* delta / trend */
+.delta{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums;font-weight:600;border-radius:6px;padding:2px 7px;}
+.delta-arrow{font-size:.72em;}
+.delta-up{color:var(--pass);background:var(--pass-bg);}
+.delta-down{color:var(--fail);background:var(--fail-bg);}
+.delta-flat{color:var(--muted);background:var(--surface-3);}
+.delta-sm{font-size:12px;padding:1px 6px;}
+.delta-md{font-size:13.5px;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.dot-up{background:var(--pass);}
+.dot-down{background:var(--fail);}
+.dot-flat{background:var(--faint);}
+.statusdot{display:inline-flex;align-items:center;gap:6px;}
+.statusdot-label{font-size:12.5px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.legend-item{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+/* catmark */
+.catmark{display:inline-flex;width:30px;height:30px;border-radius:8px;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.catmark-total{background:var(--accent);color:#fff;}
+.catmark-general{background:var(--surface-3);color:var(--text);}
+.catmark-cold{background:#d8e8f6;color:#2a6aa8;}
+
+/* overview rows */
+.ov-rows{display:flex;flex-direction:column;gap:16px;}
+.ovrow{display:grid;grid-template-columns:190px 1fr;gap:24px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px;}
+.ovrow-cat{display:flex;align-items:center;gap:12px;}
+.ovrow-catname{font-weight:600;font-size:17px;white-space:nowrap;}
+.ovrow-metrics{display:grid;grid-template-columns:1fr 1px 1fr;gap:32px;align-items:start;}
+.ovrow-div{background:var(--border);align-self:stretch;}
+.ovmetric{display:flex;flex-direction:column;gap:12px;}
+.ovmetric-label{font-size:12.5px;color:var(--muted);font-weight:500;}
+.ovmetric-main{display:flex;align-items:baseline;gap:14px;}
+.ovmetric-val{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+.ovmetric-pct{font-size:.45em;font-weight:500;color:var(--muted);margin-left:2px;}
+.prevref{font-size:13.5px;}
+
+/* kpi cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.kpicard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.kpicard-head{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid var(--border);}
+.kpicard-title{font-weight:600;font-size:16px;}
+.kpicard-body{padding:6px 18px 18px;}
+.kpi-metric{padding:14px 0;}
+.kpi-metric-label{font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500;}
+.kpi-divider{height:1px;background:var(--border);}
+.mblock-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:9px;}
+.mblock-val{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+.mblock-pct{font-size:.5em;font-weight:500;color:var(--muted);margin-left:2px;}
+
+/* split */
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.splitcol{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 20px 14px;}
+.splitcol-head{display:flex;align-items:baseline;gap:8px;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.splitcol-tag{font-weight:600;font-size:15px;}
+.splitrow{padding:14px 0;border-bottom:1px solid var(--surface-3);}
+.splitrow:last-child{border-bottom:none;}
+.splitrow-cat{display:flex;align-items:center;gap:9px;font-weight:500;font-size:14px;margin-bottom:8px;}
+.splitrow-val{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}
+.splitrow-val .tnum{font-size:26px;font-weight:600;letter-spacing:-.02em;}
+
+/* matrix */
+.matrixwrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.matrix{width:100%;border-collapse:collapse;}
+.matrix th,.matrix td{padding:13px 16px;text-align:right;font-variant-numeric:tabular-nums;}
+.matrix thead th{background:var(--surface-2);font-size:12.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);text-align:center;}
+.matrix .matrix-sub th{font-size:11.5px;font-weight:500;padding:8px 16px;}
+.matrix .matrix-cat{text-align:left;}
+.matrix tbody .matrix-cat{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14.5px;}
+.matrix tbody td{border-bottom:1px solid var(--surface-3);}
+.matrix tbody tr:last-child td{border-bottom:none;}
+.matrix tbody td b{font-size:15px;}
+.matrix-gap{border-left:1px solid var(--border);}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-end;margin-bottom:18px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+.control-group{display:flex;flex-direction:column;gap:6px;}
+.control-grow{flex:1;min-width:160px;}
+.control-label{font-size:11.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+.segmented{display:inline-flex;background:var(--surface-3);border-radius:9px;padding:3px;gap:2px;}
+.seg-btn{appearance:none;border:none;background:none;cursor:pointer;font-family:inherit;padding:7px 13px;border-radius:7px;color:var(--muted);transition:all .12s;font-weight:600;font-size:13px;white-space:nowrap;}
+.seg-btn:hover{color:var(--text);}
+.seg-on{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(43,51,64,0.1);}
+.search-input,.region-select{font-family:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);width:100%;}
+.search-input:focus,.region-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,95,176,0.16);}
+.region-select{cursor:pointer;min-width:160px;}
+
+/* DC dual table */
+.dc-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.dc-table{width:100%;border-collapse:collapse;}
+.dc-table th{background:var(--surface-2);text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;}
+.dc-table th.sortable{cursor:pointer;user-select:none;}
+.dc-table th.sortable:hover{color:var(--accent);}
+.th-num,.td-num{text-align:right;}
+.dc-table td{padding:11px 16px;border-bottom:1px solid var(--surface-3);vertical-align:middle;}
+.dc-table tbody tr:last-child td{border-bottom:none;}
+.dc-table tbody tr:hover{background:var(--surface-2);}
+.row-down{box-shadow:inset 3px 0 0 var(--fail);}
+.row-up{box-shadow:inset 3px 0 0 var(--pass);}
+.td-name{min-width:160px;}
+.dc-name{display:block;font-weight:600;font-size:14px;}
+.td-num.tnum b{font-size:15px;}
+.empty{padding:40px;text-align:center;color:var(--muted);}
+.dc-table-dual th.grp-gap,.dc-table-dual td.grp-gap{border-left:1px solid var(--border);}
+.dc-grouphead th{text-align:center;border-bottom:1px solid var(--border);}
+.dc-subhead th{font-weight:500;font-size:11.5px;padding-top:8px;padding-bottom:8px;}
+
+/* DC mobile cards */
+.dc-cards{display:none;flex-direction:column;gap:10px;}
+.dccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:14px 16px;}
+.dccard-head{font-weight:600;font-size:15px;margin-bottom:12px;}
+.dccard-modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modecol{display:flex;flex-direction:column;gap:4px;padding-left:12px;border-left:2px solid var(--surface-3);}
+.modecol-lab{font-size:11.5px;color:var(--muted);font-weight:500;}
+.modecol-main{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.modecol-jun{font-size:21px;font-weight:600;letter-spacing:-.02em;}
+.modecol-prev{font-size:11.5px;}
+.dccard-down{box-shadow:inset 3px 0 0 var(--fail),var(--shadow);}
+.dccard-up{box-shadow:inset 3px 0 0 var(--pass),var(--shadow);}
+
+/* analysis */
+.stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.stat-box.stat-fail{border-top:3px solid var(--fail);}
+.stat-box.stat-critical{border-top:3px solid var(--warn);}
+.stat-box.stat-ok{border-top:3px solid var(--pass);}
+.stat-num{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1;margin-bottom:8px;}
+.stat-fail .stat-num{color:var(--fail);}
+.stat-critical .stat-num{color:#a8740f;}
+.stat-ok .stat-num{color:var(--pass);}
+.stat-lab{font-size:13px;font-weight:500;line-height:1.35;}
+.rank-list{display:flex;flex-direction:column;gap:8px;}
+.rankrow{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 18px 13px 14px;box-shadow:var(--shadow);}
+.urg-critical{box-shadow:inset 4px 0 0 var(--fail),var(--shadow);}
+.urg-watch{box-shadow:inset 4px 0 0 var(--warn),var(--shadow);}
+.urg-ok{box-shadow:inset 4px 0 0 var(--pass),var(--shadow);}
+.rank-no{font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--faint);width:26px;text-align:center;flex-shrink:0;}
+.rank-dc{min-width:170px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+.rank-modes{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;}
+.rank-mode{display:inline-flex;align-items:center;gap:7px;}
+.rank-mode-lab{color:var(--muted);font-size:12px;}
+.rank-mode b{font-size:15px;}
+.rank-bar-wrap{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.rank-bar-track{height:8px;border-radius:5px;background:var(--surface-3);overflow:hidden;}
+.rank-bar-fill{height:100%;border-radius:5px;}
+.rank-bar-up{background:var(--pass);}
+.rank-bar-down{background:var(--fail);}
+.rank-bar-flat{background:var(--faint);}
+.utag{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+.utag-critical{background:var(--fail-bg);color:var(--fail);}
+.utag-watch{background:var(--warn-bg);color:#8a6109;}
+.utag-ok{background:var(--pass-bg);color:var(--pass);}
+.action-note{margin-top:24px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;}
+.action-note-title{font-weight:600;font-size:15px;margin-bottom:12px;}
+.action-list{margin:0;padding-left:20px;font-size:13.5px;line-height:1.7;}
+.action-list li{margin-bottom:6px;}
+
+/* loading / error */
+.center-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px;color:var(--muted);}
+.spinner{width:36px;height:36px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+.error-box{background:var(--fail-bg);border:1px solid #f5c0bc;border-radius:var(--radius);padding:20px 24px;max-width:560px;}
+.error-title{font-weight:600;color:var(--fail);margin-bottom:8px;}
+.error-msg{font-size:13.5px;color:var(--text);line-height:1.6;}
+.error-msg code{font-family:var(--font-mono);font-size:12px;background:rgba(210,59,52,.1);padding:2px 5px;border-radius:4px;}
+.config-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:540px;text-align:center;}
+.config-title{font-weight:600;font-size:18px;margin-bottom:10px;}
+.config-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+.config-code{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:var(--font-mono);font-size:12.5px;text-align:left;word-break:break-all;color:var(--text);}
+
+.footer{text-align:center;padding:22px;color:var(--faint);font-size:12px;border-top:1px solid var(--border);}
+
+/* tweaks panel */
+.twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+  max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:rgba(250,249,247,.78);color:#29261b;
+  -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+  border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+  box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+  font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+.twk-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 14px;cursor:move;user-select:none}
+.twk-hd b{font-size:12px;font-weight:600;}
+.twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+.twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+.twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;scrollbar-width:thin}
+.twk-row{display:flex;flex-direction:column;gap:5px}
+.twk-lbl{display:flex;justify-content:space-between;align-items:baseline;color:rgba(41,38,27,.72)}
+.twk-lbl>span:first-child{font-weight:500}
+.twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(41,38,27,.45);padding:10px 0 0}
+.twk-sect:first-child{padding-top:0}
+.twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;background:rgba(0,0,0,.06);user-select:none}
+.twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);transition:left .15s,width .15s}
+.twk-seg.dragging .twk-seg-thumb{transition:none}
+.twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;overflow-wrap:anywhere}
+.twk-chips{display:flex;gap:6px}
+.twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);transition:transform .12s,box-shadow .12s}
+.twk-chip:hover{transform:translateY(-1px);box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+.twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.15)}
+.twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+
+/* responsive */
+@media (max-width:900px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .split-grid{grid-template-columns:1fr;}
+  .stat-strip{grid-template-columns:repeat(2,1fr);}
+  .ovrow{grid-template-columns:1fr;gap:14px;}
+  .ovrow-metrics{gap:24px;}
+}
+@media (max-width:760px){
+  .dc-table-wrap{display:none;}
+  .dc-cards{display:flex;}
+  .brand-sub{display:none;}
+  .period-label{display:none;}
+  .period-val{font-size:13px;}
+  .tabs{overflow-x:auto;}
+  .matrixwrap{overflow-x:auto;}
+  .ovrow-metrics{grid-template-columns:1fr;gap:18px;}
+  .ovrow-div{height:1px;}
+  .last-updated{display:none;}
+}
+@media (max-width:480px){
+  .stat-strip{grid-template-columns:1fr 1fr;}
+  .rank-dc{min-width:120px;}
+  .rankrow{flex-wrap:wrap;}
+  .rank-bar-wrap{order:3;width:100%;flex-basis:100%;}
+  .refresh-btn span{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONFIG — แก้ไข SHEET_URL เป็น URL ของ Google Sheets จริง
+     ตัวอย่าง: https://docs.google.com/spreadsheets/d/1ABC.../edit
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+window.SHEET_URL = "https://docs.google.com/spreadsheets/d/18UQ_NySqyjEw3jaJxFJ2UHsPL2MUL_8XVfaIITgPU5M/edit?usp=sharing";
+// ↑ วาง URL ของ Google Sheets ที่แชร์แบบ "Anyone with the link can view" ที่นี่
+</script>
+
+<script type="text/babel">
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const fmt1 = (x) => (x == null || isNaN(x) ? "–" : x.toFixed(1));
+const fmtDelta = (x) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(1)}`;
+
+function trendOf(may, jun) {
+  const d = jun - may;
+  return d > 0.05 ? "up" : d < -0.05 ? "down" : "flat";
+}
+const URG = { down: { key: "critical", label: "เร่งด่วน" }, flat: { key: "watch", label: "เฝ้าระวัง" }, up: { key: "ok", label: "กำลังฟื้นตัว" } };
+
+function Delta({ may, jun, size = "md" }) {
+  const d = jun - may;
+  const dir = d > 0.04 ? "up" : d < -0.04 ? "down" : "flat";
+  const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
+  return <span className={`delta delta-${dir} delta-${size}`}><span className="delta-arrow">{arrow}</span><span>{fmtDelta(d)}</span></span>;
+}
+
+function PrevRef({ may }) {
+  return <div className="prevref muted">พ.ค. <span className="tnum">{fmt1(may)}%</span></div>;
+}
+
+function CatIcon({ cat }) {
+  if (cat === "cold") return <span className="catmark catmark-cold">❄</span>;
+  if (cat === "general") return <span className="catmark catmark-general">◧</span>;
+  return <span className="catmark catmark-total">◆</span>;
+}
+
+// ─── Google Sheets loader ─────────────────────────────────────────────────────
+
+function extractSheetId(url) {
+  const m = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let cur = '';
+  let inQ = false;
+  const chars = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (c === '"') {
+      if (inQ && chars[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === '\n' && !inQ) {
+      rows.push(splitCSVRow(cur));
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if (cur) rows.push(splitCSVRow(cur));
+  return rows;
+}
+
+function splitCSVRow(line) {
+  const cells = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+function toPercent(s) {
+  const n = parseFloat(String(s).replace(/[,\s%]/g, ''));
+  if (isNaN(n)) return null;
+  // Values can be 0-1 decimals or already percentages (>1)
+  const pct = n <= 1 ? n * 100 : n;
+  return Math.round(pct * 10) / 10;
+}
+
+function parseSheetRows(csvText) {
+  const rows = parseCSV(csvText);
+
+  // Find Grand Total in summary section (rows 3–6)
+  let grandTotal = null;
+  for (let i = 2; i < Math.min(8, rows.length); i++) {
+    if (rows[i] && rows[i][1] && rows[i][1].includes('Grand Total')) {
+      grandTotal = {
+        all: { may: toPercent(rows[i][2]), jun: toPercent(rows[i][4]) },
+        exCust: { may: toPercent(rows[i][3]), jun: toPercent(rows[i][5]) },
+      };
+      break;
+    }
+  }
+
+  // Find DC section start (after row with "DC" in col 1)
+  let dcStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = rows[i][1];
+    if (cell === 'DC' || cell === '"DC"') { dcStart = i + 2; break; }
+  }
+
+  const dcs = [];
+  if (dcStart > 0) {
+    for (let i = dcStart; i < rows.length; i++) {
+      const r = rows[i];
+      const name = r[1];
+      if (!name || name.includes('Grand Total')) continue;
+      const mayAll = toPercent(r[2]);
+      const mayEx = toPercent(r[3]);
+      const junAll = toPercent(r[4]);
+      const junEx = toPercent(r[5]);
+      if (mayAll == null || junAll == null) continue;
+      dcs.push({ name, all: { may: mayAll, jun: junAll }, exCust: { may: mayEx ?? mayAll, jun: junEx ?? junAll } });
+    }
+  }
+
+  return { grandTotal, dcs };
+}
+
+async function fetchSheet(sheetId, sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${sheetName}`);
+  return res.text();
+}
+
+// Province → region mapping
+const PROVINCE_REGION = {
+  'CDC บางนา':'bkk','DC รังสิต':'bkk','DC พุทธมณฑลสาย 3':'bkk',
+  'DC นครปฐม':'central','DC สมุทรสาคร':'central','DC สระบุรี':'central',
+  'DC ราชบุรี':'central','DC ลพบุรี':'central','DC อยุธยา':'central',
+  'DC ชะอำ':'central','DC ชัยนาท':'central','DC สุพรรณบุรี':'central',
+  'DC ลพบุรี':'central','DC พัทยา':'east','DC ชลบุรี':'east',
+  'DC ระยอง':'east','DC ฉะเชิงเทรา':'east','DC ปราจีนบุรี':'east',
+  'DC จันทบุรี':'east','DC ปากช่อง':'east',
+  'DC กาญจนบุรี':'west',
+  'DC เชียงใหม่':'north','DC เชียงราย':'north','DC ลำพูน':'north',
+  'DC ลำปาง':'north','DC พิษณุโลก':'north','DC นครสวรรค์':'north',
+  'DC สุโขทัย':'north','DC อุตรดิตถ์':'north','DC ตาก':'north',
+  'DC แพร่':'north','DC น่าน':'north','DC พะเยา':'north',
+  'DC แม่ฮ่องสอน':'north','DC ฝาง':'north','DC แม่สาย':'north',
+  'DC พิจิตร':'north','DC เพชรบูรณ์':'north',
+  'DC โคราช':'northeast','DC ขอนแก่น':'northeast','DC อุดรธานี':'northeast',
+  'DC อุบลราชธานี':'northeast','DC บุรีรัมย์':'northeast','DC ร้อยเอ็ด':'northeast',
+  'DC สุรินทร์':'northeast','DC ศรีสะเกษ':'northeast','DC ชัยภูมิ':'northeast',
+  'DC สกลนคร':'northeast','DC หนองคาย':'northeast','DC ยโสธร':'northeast',
+  'DC กาฬสินธุ์':'northeast','DC มุกดาหาร':'northeast','DC นครพนม':'northeast',
+  'DC หาดใหญ่':'south','DC สุราษฎร์':'south','DC ภูเก็ต':'south',
+  'DC นครศรีธรรมราช':'south','DC กระบี่':'south','DC ชุมพร':'south',
+  'DC พัทลุง':'south','DC ทุ่งสง':'south','DC พังงา':'south',
+};
+
+const REGIONS_LIST = [
+  { key: 'bkk', th: 'กรุงเทพและปริมณฑล' },
+  { key: 'central', th: 'ภาคกลาง' },
+  { key: 'north', th: 'ภาคเหนือ' },
+  { key: 'northeast', th: 'ภาคอีสาน' },
+  { key: 'east', th: 'ภาคตะวันออก' },
+  { key: 'west', th: 'ภาคตะวันตก' },
+  { key: 'south', th: 'ภาคใต้' },
+];
+
+async function loadSLAData(sheetId) {
+  const [abCSV, ccCSV, totCSV] = await Promise.all([
+    fetchSheet(sheetId, 'AB'),
+    fetchSheet(sheetId, 'CC'),
+    fetchSheet(sheetId, 'AB+CC'),
+  ]);
+
+  const ab = parseSheetRows(abCSV);
+  const cc = parseSheetRows(ccCSV);
+  const tot = parseSheetRows(totCSV);
+
+  // Build DC map keyed by name
+  const dcMap = {};
+  const ensureDC = (name) => { if (!dcMap[name]) dcMap[name] = { name }; };
+  ab.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].general = { all: d.all, exCust: d.exCust }; });
+  cc.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].cold = { all: d.all, exCust: d.exCust }; });
+  tot.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].total = { all: d.all, exCust: d.exCust }; });
+
+  const dcs = Object.values(dcMap)
+    .filter((d) => d.total)
+    .map((d, i) => ({
+      code: `DC-${String(i + 1).padStart(3, '0')}`,
+      name: d.name,
+      region: PROVINCE_REGION[d.name] || 'other',
+      regionTh: REGIONS_LIST.find((r) => r.key === (PROVINCE_REGION[d.name] || 'other'))?.th || 'อื่นๆ',
+      total: d.total,
+      general: d.general || d.total,
+      cold: d.cold || d.total,
+    }));
+
+  const overview = {
+    total: tot.grandTotal,
+    general: ab.grandTotal,
+    cold: cc.grandTotal,
+  };
+
+  return { dcs, overview, loadedAt: new Date() };
+}
+
+// ─── Tweaks panel ─────────────────────────────────────────────────────────────
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((key, val) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+
+  const clamp = React.useCallback(() => {
+    const p = dragRef.current; if (!p) return;
+    const PAD = 16;
+    offsetRef.current = {
+      x: Math.min(Math.max(PAD, window.innerWidth - p.offsetWidth - PAD), Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(Math.max(PAD, window.innerHeight - p.offsetHeight - PAD), Math.max(PAD, offsetRef.current.y)),
+    };
+    p.style.right = offsetRef.current.x + 'px';
+    p.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clamp();
+    const ro = new ResizeObserver(clamp);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clamp]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (e?.data?.type === '__activate_edit_mode') setOpen(true);
+      if (e?.data?.type === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => { setOpen(false); window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); };
+
+  const onDragStart = (e) => {
+    const p = dragRef.current; if (!p) return;
+    const r = p.getBoundingClientRect();
+    const startR = window.innerWidth - r.right, startB = window.innerHeight - r.bottom;
+    const sx = e.clientX, sy = e.clientY;
+    const move = (ev) => { offsetRef.current = { x: startR - (ev.clientX - sx), y: startB - (ev.clientY - sy) }; clamp(); };
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <div ref={dragRef} className="twk-panel" style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+      <div className="twk-hd" onMouseDown={onDragStart}>
+        <b>{title}</b>
+        <button className="twk-x" onMouseDown={(e) => e.stopPropagation()} onClick={dismiss}>✕</button>
+      </div>
+      <div className="twk-body">{children}</div>
+    </div>
+  );
+}
+
+function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+function TweakRow({ label, children }) { return <div className="twk-row"><div className="twk-lbl"><span>{label}</span></div>{children}</div>; }
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const valueRef = React.useRef(value); valueRef.current = value;
+  const opts = options.map((o) => typeof o === 'object' ? o : { value: o, label: o });
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+  const segAt = (cx) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const i = Math.floor(((cx - r.left - 2) / (r.width - 4)) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX); if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => { if (!trackRef.current) return; const v = segAt(ev.clientX); if (v !== valueRef.current) onChange(v); };
+    const up = () => { setDragging(false); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown} className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb" style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`, width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>{o.label}</button>)}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakColor({ label, value, options, onChange }) {
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const isLight = (hex) => {
+    const h = String(hex).replace('#', '').padEnd(6, '0');
+    const n = parseInt(h.slice(0, 6), 16);
+    if (isNaN(n)) return true;
+    return ((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114 > 148000;
+  };
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips">
+        {(options || []).map((o, i) => {
+          const on = key(o) === key(value);
+          return (
+            <button key={i} type="button" className="twk-chip" data-on={on ? '1' : '0'} style={{ background: o }} onClick={() => onChange(o)}>
+              {on && <svg viewBox="0 0 14 14" aria-hidden="true" style={{position:'absolute',top:6,left:6,width:13,height:13,filter:'drop-shadow(0 1px 1px rgba(0,0,0,.3))'}}><path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" stroke={isLight(o) ? 'rgba(0,0,0,.78)' : '#fff'} /></svg>}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+// ─── Overview tab ─────────────────────────────────────────────────────────────
+
+function OvMetric({ label, data }) {
+  return (
+    <div className="ovmetric">
+      <div className="ovmetric-label">{label}</div>
+      <div className="ovmetric-main">
+        <span className="ovmetric-val tnum">{fmt1(data.jun)}<span className="ovmetric-pct">%</span></span>
+        <Delta may={data.may} jun={data.jun} size="md" />
+      </div>
+      <PrevRef may={data.may} />
+    </div>
+  );
+}
+
+function OverviewRow({ cat, overview }) {
+  const o = overview[cat];
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="ovrow">
+      <div className="ovrow-cat"><CatIcon cat={cat} /><span className="ovrow-catname">{NAMES[cat]}</span></div>
+      <div className="ovrow-metrics">
+        <OvMetric label="ทุกสาเหตุ" data={o.all} />
+        <div className="ovrow-div" />
+        <OvMetric label="ตัดสาเหตุลูกค้า" data={o.exCust} />
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ cat, overview }) {
+  const o = overview[cat];
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="kpicard">
+      <div className="kpicard-head"><CatIcon cat={cat} /><div className="kpicard-title">{NAMES[cat]}</div></div>
+      <div className="kpicard-body">
+        {['all', 'exCust'].map((mode, i) => (
+          <React.Fragment key={mode}>
+            {i > 0 && <div className="kpi-divider" />}
+            <div className="kpi-metric">
+              <div className="kpi-metric-label">{mode === 'all' ? 'ทุกสาเหตุ' : 'ตัดสาเหตุลูกค้า'}</div>
+              <div className="mblock-top"><span className="mblock-val tnum">{fmt1(o[mode].jun)}<span className="mblock-pct">%</span></span><Delta may={o[mode].may} jun={o[mode].jun} size="md" /></div>
+              <PrevRef may={o[mode].may} />
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SplitColumn({ mode, overview }) {
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="splitcol">
+      <div className="splitcol-head"><span className="splitcol-tag">{mode === 'all' ? 'ทุกสาเหตุ' : 'ตัดสาเหตุลูกค้า'}</span></div>
+      {['total', 'general', 'cold'].map((cat) => {
+        const d = overview[cat][mode];
+        return (
+          <div className="splitrow" key={cat}>
+            <div className="splitrow-cat"><CatIcon cat={cat} /><span>{NAMES[cat]}</span></div>
+            <div className="splitrow-val"><span className="tnum">{fmt1(d.jun)}%</span><Delta may={d.may} jun={d.jun} size="sm" /></div>
+            <PrevRef may={d.may} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MatrixTable({ overview }) {
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="matrixwrap">
+      <table className="matrix">
+        <thead>
+          <tr><th className="matrix-cat">หมวด</th><th colSpan="3">ทุกสาเหตุ</th><th colSpan="3">ตัดสาเหตุลูกค้า</th></tr>
+          <tr className="matrix-sub"><th></th><th>พ.ค.</th><th>มิ.ย.</th><th>เปลี่ยนแปลง</th><th>พ.ค.</th><th>มิ.ย.</th><th>เปลี่ยนแปลง</th></tr>
+        </thead>
+        <tbody>
+          {['total', 'general', 'cold'].map((cat) => {
+            const a = overview[cat].all, e = overview[cat].exCust;
+            return (
+              <tr key={cat}>
+                <td className="matrix-cat"><CatIcon cat={cat} /><span>{NAMES[cat]}</span></td>
+                <td className="tnum muted">{fmt1(a.may)}</td><td className="tnum"><b>{fmt1(a.jun)}</b></td><td><Delta may={a.may} jun={a.jun} size="sm" /></td>
+                <td className="tnum muted matrix-gap">{fmt1(e.may)}</td><td className="tnum"><b>{fmt1(e.jun)}</b></td><td><Delta may={e.may} jun={e.jun} size="sm" /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Overview({ layout, overview }) {
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">ภาพรวมเครือข่าย</h2>
+          <p className="section-desc">เปรียบเทียบ SLA เดือนพฤษภาคม → มิถุนายน 2569 · ถ่วงน้ำหนักตามปริมาณออเดอร์</p>
+        </div>
+        <div className="trend-legend">
+          <span className="legend-item"><span className="dot dot-up" />ดีขึ้น</span>
+          <span className="legend-item"><span className="dot dot-down" />ลดลง</span>
+          <span className="legend-item"><span className="dot dot-flat" />คงที่</span>
+        </div>
+      </div>
+      {layout === "rows" && <div className="ov-rows">{['total','general','cold'].map((c) => <OverviewRow key={c} cat={c} overview={overview} />)}</div>}
+      {layout === "cards" && <div className="kpi-grid">{['total','general','cold'].map((c) => <KpiCard key={c} cat={c} overview={overview} />)}</div>}
+      {layout === "split" && <div className="split-grid"><SplitColumn mode="all" overview={overview} /><SplitColumn mode="exCust" overview={overview} /></div>}
+      {layout === "matrix" && <MatrixTable overview={overview} />}
+    </div>
+  );
+}
+
+// ─── By DC tab ────────────────────────────────────────────────────────────────
+
+function Segmented({ options, value, onChange }) {
+  return (
+    <div className="segmented">
+      {options.map((o) => <button key={o.key} className={`seg-btn ${value === o.key ? "seg-on" : ""}`} onClick={() => onChange(o.key)}>{o.label}</button>)}
+    </div>
+  );
+}
+
+function ByDC({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+  const [region, setRegion] = React.useState("all");
+  const [q, setQ] = React.useState("");
+  const [sort, setSort] = React.useState({ key: "allJun", dir: "asc" });
+
+  const rows = React.useMemo(() => {
+    let list = dcs.map((dc) => {
+      const a = dc[cat].all, e = dc[cat].exCust;
+      return { dc, all: { may: a.may, jun: a.jun, trend: trendOf(a.may, a.jun) }, ex: { may: e.may, jun: e.jun } };
+    });
+    if (region !== "all") list = list.filter((r) => r.dc.region === region);
+    if (q.trim()) { const s = q.toLowerCase(); list = list.filter((r) => r.dc.name.toLowerCase().includes(s) || (r.dc.regionTh || '').includes(s)); }
+    const dir = sort.dir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      if (sort.key === "name") return a.dc.name < b.dc.name ? -dir : dir;
+      const av = sort.key === "exJun" ? a.ex.jun : a.all.jun;
+      const bv = sort.key === "exJun" ? b.ex.jun : b.all.jun;
+      return (av - bv) * dir;
+    });
+    return list;
+  }, [cat, region, q, sort, dcs]);
+
+  const setSortKey = (key) => setSort((s) => s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
+  const arr = (key) => sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+  const counts = React.useMemo(() => { const c = {up:0,down:0,flat:0}; rows.forEach((r) => c[r.all.trend]++); return c; }, [rows]);
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">SLA ราย DC</h2>
+          <p className="section-desc">{dcs.length} ศูนย์กระจายสินค้า · แสดงทั้งทุกสาเหตุและตัดสาเหตุลูกค้า เทียบ พ.ค. → มิ.ย.</p>
+        </div>
+        <div className="trend-legend">
+          <span className="legend-item"><span className="dot dot-up" />{counts.up} ดีขึ้น</span>
+          <span className="legend-item"><span className="dot dot-down" />{counts.down} ลดลง</span>
+          <span className="legend-item"><span className="dot dot-flat" />{counts.flat} คงที่</span>
+        </div>
+      </div>
+
+      <div className="controls">
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[{key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}]} />
+        </div>
+        <div className="control-group control-grow">
+          <label className="control-label">ค้นหา DC</label>
+          <input className="search-input" placeholder="ชื่อ DC, จังหวัด, ภูมิภาค…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="control-group">
+          <label className="control-label">ภูมิภาค</label>
+          <select className="region-select" value={region} onChange={(e) => setRegion(e.target.value)}>
+            <option value="all">ทุกภูมิภาค</option>
+            {REGIONS_LIST.map((r) => <option key={r.key} value={r.key}>{r.th}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="dc-table-wrap">
+        <table className="dc-table dc-table-dual">
+          <thead>
+            <tr className="dc-grouphead">
+              <th rowSpan="2" className="sortable" style={{textAlign:'left'}} onClick={() => setSortKey("name")}>DC{arr("name")}</th>
+              <th colSpan="3">ทุกสาเหตุ</th>
+              <th colSpan="3" className="grp-gap">ตัดสาเหตุลูกค้า</th>
+            </tr>
+            <tr className="dc-subhead">
+              <th className="th-num">พ.ค.</th>
+              <th className="th-num sortable" onClick={() => setSortKey("allJun")}>มิ.ย.{arr("allJun")}</th>
+              <th className="th-num">เปลี่ยนแปลง</th>
+              <th className="th-num grp-gap">พ.ค.</th>
+              <th className="th-num sortable" onClick={() => setSortKey("exJun")}>มิ.ย.{arr("exJun")}</th>
+              <th className="th-num">เปลี่ยนแปลง</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.dc.code} className={`row-${r.all.trend}`}>
+                <td className="td-name"><span className="dc-name">{r.dc.name}</span></td>
+                <td className="td-num tnum muted">{fmt1(r.all.may)}</td>
+                <td className="td-num tnum"><b>{fmt1(r.all.jun)}</b></td>
+                <td className="td-num"><Delta may={r.all.may} jun={r.all.jun} size="sm" /></td>
+                <td className="td-num tnum muted grp-gap">{fmt1(r.ex.may)}</td>
+                <td className="td-num tnum"><b>{fmt1(r.ex.jun)}</b></td>
+                <td className="td-num"><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <div className="empty">ไม่พบ DC ที่ตรงกับเงื่อนไข</div>}
+      </div>
+
+      <div className="dc-cards">
+        {rows.map((r) => (
+          <div key={r.dc.code} className={`dccard dccard-${r.all.trend}`}>
+            <div className="dccard-head">{r.dc.name}</div>
+            <div className="dccard-modes">
+              <div className="modecol">
+                <span className="modecol-lab">ทุกสาเหตุ</span>
+                <div className="modecol-main"><span className="tnum modecol-jun">{fmt1(r.all.jun)}%</span><Delta may={r.all.may} jun={r.all.jun} size="sm" /></div>
+                <span className="modecol-prev muted tnum">พ.ค. {fmt1(r.all.may)}%</span>
+              </div>
+              <div className="modecol">
+                <span className="modecol-lab">ตัดสาเหตุลูกค้า</span>
+                <div className="modecol-main"><span className="tnum modecol-jun">{fmt1(r.ex.jun)}%</span><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></div>
+                <span className="modecol-prev muted tnum">พ.ค. {fmt1(r.ex.may)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="empty">ไม่พบ DC ที่ตรงกับเงื่อนไข</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Analysis tab ─────────────────────────────────────────────────────────────
+
+function Analysis({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+  const [topN, setTopN] = React.useState(10);
+
+  const all = React.useMemo(() => {
+    return dcs.map((dc) => {
+      const a = dc[cat].all, e = dc[cat].exCust;
+      const delta = +(a.jun - a.may).toFixed(1);
+      const trend = trendOf(a.may, a.jun);
+      return { dc, delta, trend, urgency: URG[trend].key, all: { may: a.may, jun: a.jun }, ex: { may: e.may, jun: e.jun } };
+    }).sort((x, y) => x.all.jun - y.all.jun);
+  }, [cat, dcs]);
+
+  const stats = React.useMemo(() => {
+    if (!all.length) return {};
+    const lowest = all[0];
+    const declinedCount = all.filter((r) => r.trend === "down").length;
+    const improvedCount = all.filter((r) => r.trend === "up").length;
+    const worstDrop = all.reduce((m, r) => r.delta < m.delta ? r : m, all[0]);
+    return { lowest, declinedCount, improvedCount, worstDrop };
+  }, [all]);
+
+  const ranked = topN >= 9999 ? all : all.slice(0, topN);
+  const minVal = all.length ? Math.min(79, ...all.map((r) => r.all.jun)) - 1 : 79;
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">วิเคราะห์ &amp; จัดลำดับความเร่งด่วน</h2>
+          <p className="section-desc">DC ที่มี SLA เดือนมิถุนายน (ทุกสาเหตุ) ต่ำสุด เรียงจากน้อยไปมาก — เน้น DC ที่ค่าลดลงจากเดือน พ.ค.</p>
+        </div>
+      </div>
+
+      <div className="stat-strip">
+        <div className="stat-box stat-fail">
+          <div className="stat-num tnum">{stats.lowest ? fmt1(stats.lowest.all.jun) : "–"}%</div>
+          <div className="stat-lab">SLA ต่ำสุด มิ.ย.<br /><span className="muted">{stats.lowest?.dc.name || "–"}</span></div>
+        </div>
+        <div className="stat-box stat-critical">
+          <div className="stat-num tnum">{stats.declinedCount ?? "–"}</div>
+          <div className="stat-lab">DC ที่ SLA ลดลง<br /><span className="muted">เทียบกับ พ.ค.</span></div>
+        </div>
+        <div className="stat-box stat-ok">
+          <div className="stat-num tnum">{stats.improvedCount ?? "–"}</div>
+          <div className="stat-lab">DC ที่ดีขึ้น<br /><span className="muted">เทียบกับ พ.ค.</span></div>
+        </div>
+        <div className="stat-box">
+          <div className="stat-num tnum">{stats.worstDrop ? fmtDelta(stats.worstDrop.delta) : "–"}</div>
+          <div className="stat-lab">ลดลงมากสุด<br /><span className="muted">{stats.worstDrop?.dc.name || "–"}</span></div>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[{key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}]} />
+        </div>
+        <div className="control-group">
+          <label className="control-label">แสดง</label>
+          <Segmented value={String(topN)} onChange={(v) => setTopN(+v)} options={[{key:"10",label:"10 อันดับ"},{key:"20",label:"20 อันดับ"},{key:"9999",label:"ทั้งหมด"}]} />
+        </div>
+      </div>
+
+      <div className="rank-list">
+        {ranked.map((r, i) => (
+          <div key={r.dc.code} className={`rankrow urg-${r.urgency}`}>
+            <div className="rank-no">{i + 1}</div>
+            <div className="rank-dc">
+              <span className="dc-name">{r.dc.name}</span>
+              <span className={`utag utag-${r.urgency}`}>{URG[r.trend].label}</span>
+            </div>
+            <div className="rank-bar-wrap">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{ width: Math.max(3, Math.min(100, (r.all.jun - minVal) / (100 - minVal) * 100)) + "%" }} />
+              </div>
+              <div className="rank-modes">
+                <span className="rank-mode"><span className="rank-mode-lab">ทุกสาเหตุ</span><b className="tnum">{fmt1(r.all.jun)}%</b><Delta may={r.all.may} jun={r.all.jun} size="sm" /></span>
+                <span className="rank-mode"><span className="rank-mode-lab">ตัดสาเหตุลูกค้า</span><b className="tnum">{fmt1(r.ex.jun)}%</b><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="action-note">
+        <div className="action-note-title">ข้อเสนอแนะการจัดการ</div>
+        <ul className="action-list">
+          <li><b className="status-text-fail">เร่งด่วน</b> — DC ที่ SLA เดือน มิ.ย. ต่ำและลดลงจากเดือน พ.ค. ควรตั้งทีมเร่งแก้ไขและทบทวนสาเหตุรายสัปดาห์</li>
+          <li><b className="status-text-warn">เฝ้าระวัง</b> — DC ที่ค่าทรงตัว ติดตามต่อเนื่องไม่ให้ปรับลดลง</li>
+          <li>เทียบ <b>ทุกสาเหตุ</b> กับ <b>ตัดสาเหตุลูกค้า</b> เพื่อแยกว่าปัญหามาจากกระบวนการภายในหรือจากฝั่งลูกค้า</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+
+const TWEAK_DEFAULTS = { overviewLayout: "rows", accent: "#1f5fb0", density: "regular" };
+const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "bydc", th: "ราย DC" }, { key: "analysis", th: "วิเคราะห์" }];
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = React.useState(() => { try { return localStorage.getItem("sla_tab") || "overview"; } catch { return "overview"; } });
+  const [status, setStatus] = React.useState("idle"); // idle | loading | done | error
+  const [slaData, setSlaData] = React.useState(null);
+  const [errorMsg, setErrorMsg] = React.useState("");
+  const [loadedAt, setLoadedAt] = React.useState(null);
+
+  React.useEffect(() => { try { localStorage.setItem("sla_tab", tab); } catch {} }, [tab]);
+  React.useEffect(() => { document.documentElement.style.setProperty("--accent", t.accent); document.documentElement.dataset.density = t.density; }, [t.accent, t.density]);
+
+  const load = React.useCallback(async () => {
+    const url = window.SHEET_URL;
+    if (!url || !url.trim()) { setStatus("noconfig"); return; }
+    const sheetId = extractSheetId(url);
+    if (!sheetId) { setStatus("error"); setErrorMsg("URL ไม่ถูกต้อง — ต้องเป็น URL ของ Google Sheets"); return; }
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const data = await loadSLAData(sheetId);
+      setSlaData(data);
+      setLoadedAt(data.loadedAt);
+      setStatus("done");
+    } catch (e) {
+      setStatus("error");
+      setErrorMsg(e.message || "ไม่สามารถดึงข้อมูลได้");
+    }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const fmtTime = (d) => d ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "";
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <div className="brand-mark">SLA</div>
+            <div>
+              <div className="brand-title">ภาพรวม SLA</div>
+              <div className="brand-sub">ศูนย์กระจายสินค้า</div>
+            </div>
+          </div>
+          <div className="topbar-right">
+            {loadedAt && <span className="last-updated">อัปเดต {fmtTime(loadedAt)}</span>}
+            <button className="refresh-btn" onClick={load} disabled={status === "loading"}>
+              <span className={`refresh-icon${status === "loading" ? " spinning" : ""}`}>↻</span>
+              <span>รีเฟรช</span>
+            </button>
+            <div className="period">
+              <span className="period-label">รอบเปรียบเทียบ</span>
+              <span className="period-val">พ.ค. <span className="period-arrow">→</span> มิ.ย. 2569</span>
+            </div>
+          </div>
+        </div>
+        <nav className="tabs">
+          {TABS.map((tb) => (
+            <button key={tb.key} className={`tab ${tab === tb.key ? "tab-on" : ""}`} onClick={() => setTab(tb.key)}>
+              <span className="tab-th">{tb.th}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="content">
+        {status === "noconfig" && (
+          <div className="center-state">
+            <div className="config-box">
+              <div className="config-title">ตั้งค่า Google Sheets URL</div>
+              <div className="config-desc">เปิดไฟล์ <code>index.html</code> แล้วแก้ไขบรรทัดนี้ให้เป็น URL ของ Google Sheets ที่แชร์แบบ "Anyone with the link can view"</div>
+              <div className="config-code">window.SHEET_URL = "https://docs.google.com/spreadsheets/d/YOUR_ID_HERE/...";</div>
+            </div>
+          </div>
+        )}
+        {status === "loading" && (
+          <div className="center-state">
+            <div className="spinner" />
+            <span>กำลังดึงข้อมูลจาก Google Sheets…</span>
+          </div>
+        )}
+        {status === "error" && (
+          <div className="center-state">
+            <div className="error-box">
+              <div className="error-title">ดึงข้อมูลไม่สำเร็จ</div>
+              <div className="error-msg">
+                {errorMsg}<br /><br />
+                ตรวจสอบว่า Google Sheets ตั้งค่า sharing เป็น <b>"Anyone with the link can view"</b> และ URL ถูกต้อง
+              </div>
+            </div>
+            <button className="refresh-btn" onClick={load}>ลองใหม่</button>
+          </div>
+        )}
+        {status === "done" && slaData && (
+          <>
+            {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} />}
+            {tab === "bydc" && <ByDC dcs={slaData.dcs} />}
+            {tab === "analysis" && <Analysis dcs={slaData.dcs} />}
+          </>
+        )}
+      </main>
+
+      <footer className="footer">
+        ข้อมูลจาก Google Sheets · พ.ค. เทียบ มิ.ย. 2569
+      </footer>
+
+      <TweaksPanel>
+        <TweakSection label="เลย์เอาต์ภาพรวม" />
+        <TweakRadio label="รูปแบบ" value={t.overviewLayout}
+          options={["rows","cards","split","matrix"]}
+          onChange={(v) => setTweak("overviewLayout", v)} />
+        <TweakSection label="ธีม" />
+        <TweakColor label="สีหลัก" value={t.accent}
+          options={["#1f5fb0","#0f766e","#4f46e5","#475569"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakRadio label="ความหนาแน่น" value={t.density}
+          options={["compact","regular","comfy"]}
+          onChange={(v) => setTweak("density", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
