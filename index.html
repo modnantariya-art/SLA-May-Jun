@@ -534,9 +534,9 @@ async function fetchSheet(sheetId, sheetName) {
 // Province → region mapping
 const PROVINCE_REGION = {
   'CDC บางนา':'bkk','DC รังสิต':'bkk','DC พุทธมณฑลสาย 3':'bkk',
-  'DC นครปฐม':'central','DC สมุทรสาคร':'central','DC สระบุรี':'central',
-  'DC ราชบุรี':'central','DC ลพบุรี':'central','DC อยุธยา':'central',
-  'DC ชะอำ':'central','DC ชัยนาท':'central','DC สุพรรณบุรี':'central',
+  'DC นครปฐม':'central','DC สมุทรสาคร':'west','DC สระบุรี':'central',
+  'DC ราชบุรี':'west','DC ลพบุรี':'central','DC อยุธยา':'central',
+  'DC ชะอำ':'west','DC ชัยนาท':'north','DC สุพรรณบุรี':'central',
   'DC ลพบุรี':'central','DC พัทยา':'east','DC ชลบุรี':'east',
   'DC ระยอง':'east','DC ฉะเชิงเทรา':'east','DC ปราจีนบุรี':'east',
   'DC จันทบุรี':'east','DC ปากช่อง':'east',
@@ -1487,9 +1487,7 @@ function App() {
         )}
       </main>
 
-      <footer className="footer">
-        ข้อมูลจาก Google Sheets · พ.ค. เทียบ มิ.ย. 2569
-      </footer>
+      <footer className="footer" />
 
       <TweaksPanel>
         <TweakSection label="เลย์เอาต์ภาพรวม" />
