@@ -314,6 +314,27 @@ body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size
 .bkkrow-jun{font-size:26px;font-weight:600;letter-spacing:-.02em;}
 .bkkrow-may{font-size:12.5px;}
 
+/* Region tab */
+.region-list{display:flex;flex-direction:column;gap:10px;}
+.region-block{border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow);}
+.region-row{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);padding:14px 18px 14px 14px;}
+.region-block .region-dcs~* , .region-row{border-radius:0;}
+.region-info{display:flex;align-items:center;gap:10px;min-width:200px;flex-wrap:wrap;}
+.region-name{font-weight:600;font-size:15px;white-space:nowrap;}
+.region-cnt{font-size:12px;color:var(--muted);background:var(--surface-2);padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.region-bar-area{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.region-metrics{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;}
+.region-mode-group{display:inline-flex;align-items:center;gap:7px;}
+.region-chevron{font-size:11px;color:var(--faint);flex-shrink:0;width:16px;text-align:center;}
+.region-dcs{background:var(--surface-2);border:1px solid var(--border);border-top:none;}
+.region-dc-row{display:flex;align-items:center;gap:12px;padding:10px 18px 10px 40px;border-bottom:1px solid var(--border);font-size:13px;}
+.region-dc-row:last-child{border-bottom:none;}
+.region-dc-row.row-down{box-shadow:inset 3px 0 0 var(--fail);}
+.region-dc-row.row-up{box-shadow:inset 3px 0 0 var(--pass);}
+.region-dc-no{font-family:var(--font-mono);font-size:12px;color:var(--faint);width:20px;text-align:center;flex-shrink:0;}
+.region-dc-name{min-width:140px;font-weight:500;}
+.region-dc-vals{display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex:1;}
+
 /* Top 5 Best */
 .top5-section{margin-top:28px;}
 .top5-list{display:flex;flex-direction:column;gap:8px;}
@@ -340,6 +361,8 @@ body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size
   .bkk-grid{grid-template-columns:1fr;}
 }
 @media (max-width:760px){
+  .region-info{min-width:0;}
+  .region-dc-row{padding-left:24px;}
   .dc-table-wrap{display:none;}
   .dc-cards{display:flex;}
   .brand-sub{display:none;}
@@ -1188,6 +1211,111 @@ function Analysis({ dcs }) {
   );
 }
 
+// ─── Region tab ───────────────────────────────────────────────────────────────
+
+function RegionTab({ dcs }) {
+  const [cat, setCat] = React.useState('total');
+  const [expanded, setExpanded] = React.useState(null);
+
+  const regions = React.useMemo(() => {
+    return REGIONS_LIST.map(reg => {
+      const regDCs = dcs.filter(d => d.region === reg.key);
+      if (!regDCs.length) return null;
+      const avg = (mode, month) => {
+        const vals = regDCs.map(d => d[cat][mode][month]).filter(v => v != null);
+        return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 10) / 10 : null;
+      };
+      const allJun = avg('all', 'jun');
+      const allMay = avg('all', 'may');
+      const exJun = avg('exCust', 'jun');
+      const exMay = avg('exCust', 'may');
+      const trend = trendOf(allMay, allJun);
+      const urgency = URG[trend].key;
+      const dcsSorted = [...regDCs].sort((a, b) => a[cat].all.jun - b[cat].all.jun);
+      return { key: reg.key, label: reg.th, count: regDCs.length, allJun, allMay, exJun, exMay, trend, urgency, dcs: dcsSorted };
+    }).filter(Boolean).sort((a, b) => a.allJun - b.allJun);
+  }, [dcs, cat]);
+
+  const minBar = regions.length ? Math.max(0, Math.min(...regions.map(r => r.allJun)) - 4) : 0;
+  const pct = (v) => v == null ? 0 : Math.max(3, Math.min(100, (v - minBar) / (100 - minBar) * 100));
+
+  const toggleExpand = (key) => setExpanded(prev => prev === key ? null : key);
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">SLA รายภูมิภาค</h2>
+          <p className="section-desc">เปรียบเทียบ SLA เฉลี่ยแต่ละภูมิภาค เดือนมิถุนายน เรียงจากต่ำไปสูง</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[
+            {key:'total',label:'รวม'},{key:'general',label:'ทั่วไป'},{key:'cold',label:'Cold Chain'}
+          ]} />
+        </div>
+      </div>
+
+      <div className="region-list">
+        {regions.map(r => (
+          <div key={r.key} className="region-block">
+            <div className={`region-row urg-${r.urgency}`} onClick={() => toggleExpand(r.key)} style={{cursor:'pointer'}}>
+              <div className="region-info">
+                <span className="region-name">{r.label}</span>
+                <span className="region-cnt">{r.count} DC</span>
+                <span className={`utag utag-${r.urgency}`}>{URG[r.trend].label}</span>
+              </div>
+              <div className="region-bar-area">
+                <div className="rank-bar-track">
+                  <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: pct(r.allJun) + '%'}} />
+                </div>
+                <div className="region-metrics">
+                  <span className="region-mode-group">
+                    <span className="rank-mode-lab">ทุกสาเหตุ</span>
+                    <b className="tnum">{fmt1(r.allJun)}%</b>
+                    <Delta may={r.allMay} jun={r.allJun} size="sm" />
+                  </span>
+                  <span className="region-mode-group">
+                    <span className="rank-mode-lab">ตัดสาเหตุลูกค้า</span>
+                    <b className="tnum">{fmt1(r.exJun)}%</b>
+                    <Delta may={r.exMay} jun={r.exJun} size="sm" />
+                  </span>
+                </div>
+              </div>
+              <div className="region-chevron">{expanded === r.key ? '▲' : '▼'}</div>
+            </div>
+
+            {expanded === r.key && (
+              <div className="region-dcs">
+                {r.dcs.map((dc, i) => {
+                  const a = dc[cat].all, e = dc[cat].exCust;
+                  const t = trendOf(a.may, a.jun);
+                  return (
+                    <div key={dc.code} className={`region-dc-row row-${t}`}>
+                      <span className="region-dc-no">{i + 1}</span>
+                      <span className="region-dc-name">{dc.name}</span>
+                      <span className="region-dc-vals">
+                        <span className="rank-mode-lab">ทุกสาเหตุ</span>
+                        <b className="tnum">{fmt1(a.jun)}%</b>
+                        <Delta may={a.may} jun={a.jun} size="sm" />
+                        <span className="rank-mode-lab" style={{marginLeft:10}}>ตัดลูกค้า</span>
+                        <b className="tnum">{fmt1(e.jun)}%</b>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Top Rank tab ─────────────────────────────────────────────────────────────
 
 function TopRank({ dcs }) {
@@ -1254,7 +1382,7 @@ function TopRank({ dcs }) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 const TWEAK_DEFAULTS = { overviewLayout: "rows", accent: "#1f5fb0", density: "regular" };
-const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "bydc", th: "ราย DC" }, { key: "analysis", th: "วิเคราะห์" }, { key: "top", th: "Top 10" }];
+const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "region", th: "ภูมิภาค" }, { key: "bydc", th: "ราย DC" }, { key: "top", th: "Top 10" }];
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -1352,8 +1480,8 @@ function App() {
         {status === "done" && slaData && (
           <>
             {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} dcs={slaData.dcs} />}
+            {tab === "region" && <RegionTab dcs={slaData.dcs} />}
             {tab === "bydc" && <ByDC dcs={slaData.dcs} />}
-            {tab === "analysis" && <Analysis dcs={slaData.dcs} />}
             {tab === "top" && <TopRank dcs={slaData.dcs} />}
           </>
         )}
