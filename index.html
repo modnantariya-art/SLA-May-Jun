@@ -277,6 +277,58 @@ body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size
 .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.15)}
 .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
 
+/* bar chart section */
+.barchart-section{margin-top:28px;}
+.subsec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.subsec-title{font-size:15px;font-weight:600;}
+.barchart-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.bccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.bccard-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);}
+.bccard-title{font-weight:600;font-size:14.5px;}
+.bccard-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;}
+.bcmode{display:flex;flex-direction:column;gap:7px;}
+.bcmode-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+.bcbar-row{display:flex;align-items:center;gap:8px;}
+.bcbar-month{font-size:11.5px;color:var(--faint);width:26px;text-align:right;flex-shrink:0;}
+.bcbar-track{flex:1;height:10px;border-radius:5px;background:var(--surface-3);overflow:hidden;}
+.bcbar-fill{height:100%;border-radius:5px;transition:width .4s;}
+.bcbar-fill-may{background:var(--border-strong);opacity:.55;}
+.bcbar-fill-up{background:var(--pass);}
+.bcbar-fill-down{background:var(--fail);}
+.bcbar-fill-flat{background:var(--faint);}
+.bcbar-val{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;width:42px;flex-shrink:0;text-align:right;}
+.bcsep{height:1px;background:var(--border);margin:1px 0;}
+
+/* BKK vs Region */
+.bkk-section{margin-top:24px;}
+.bkk-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.bkkcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.bkkcard-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.bkkcard-title{font-weight:600;font-size:16px;}
+.bkkcard-cnt{font-size:11.5px;color:var(--muted);background:var(--surface-2);padding:2px 9px;border-radius:20px;}
+.bkkcard-body{padding:4px 0;}
+.bkkrow{padding:13px 18px;border-bottom:1px solid var(--surface-3);}
+.bkkrow:last-child{border-bottom:none;}
+.bkkrow-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px;}
+.bkkrow-data{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.bkkrow-jun{font-size:26px;font-weight:600;letter-spacing:-.02em;}
+.bkkrow-may{font-size:12.5px;}
+
+/* Top 5 Best */
+.top5-section{margin-top:28px;}
+.top5-list{display:flex;flex-direction:column;gap:8px;}
+.top5row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;box-shadow:var(--shadow);}
+.top5-medal{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.medal-1{background:#fef9c3;}
+.medal-2{background:#f1f5f9;}
+.medal-3{background:#fff7ed;}
+.medal-n{background:var(--surface-3);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;color:var(--faint);}
+.top5-dc-name{min-width:150px;font-weight:600;font-size:14px;}
+.top5-bar-area{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.top5-metrics{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.top5-jun{font-size:20px;font-weight:600;letter-spacing:-.02em;}
+.top5-exlab{font-size:12px;color:var(--muted);}
+
 /* responsive */
 @media (max-width:900px){
   .kpi-grid{grid-template-columns:1fr;}
@@ -284,6 +336,8 @@ body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size
   .stat-strip{grid-template-columns:repeat(2,1fr);}
   .ovrow{grid-template-columns:1fr;gap:14px;}
   .ovrow-metrics{gap:24px;}
+  .barchart-grid{grid-template-columns:1fr;}
+  .bkk-grid{grid-template-columns:1fr;}
 }
 @media (max-width:760px){
   .dc-table-wrap{display:none;}
@@ -657,6 +711,119 @@ function TweakColor({ label, value, options, onChange }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
+function BarChartSection({ overview }) {
+  const CATS = [
+    { key: 'total', label: 'SLA รวม' },
+    { key: 'general', label: 'สินค้าทั่วไป' },
+    { key: 'cold', label: 'Cold Chain' },
+  ];
+  const MODES = [
+    { key: 'all', label: 'ทุกสาเหตุ' },
+    { key: 'exCust', label: 'ตัดสาเหตุลูกค้า' },
+  ];
+  const allVals = CATS.flatMap(c => MODES.flatMap(m => [overview[c.key][m.key].may, overview[c.key][m.key].jun])).filter(v => v != null);
+  const minVal = allVals.length ? Math.max(0, Math.min(...allVals) - 4) : 0;
+  const pct = (v) => v == null ? 0 : Math.max(2, Math.min(100, (v - minVal) / (100 - minVal) * 100));
+
+  return (
+    <div className="barchart-section">
+      <div className="subsec-head">
+        <span className="subsec-title">เปรียบเทียบ พ.ค. → มิ.ย.</span>
+      </div>
+      <div className="barchart-grid">
+        {CATS.map(c => {
+          const d = overview[c.key];
+          return (
+            <div key={c.key} className="bccard">
+              <div className="bccard-head"><CatIcon cat={c.key} /><span className="bccard-title">{c.label}</span></div>
+              <div className="bccard-body">
+                {MODES.map((m, mi) => {
+                  const trend = trendOf(d[m.key].may, d[m.key].jun);
+                  return (
+                    <React.Fragment key={m.key}>
+                      {mi > 0 && <div className="bcsep" />}
+                      <div className="bcmode">
+                        <div className="bcmode-label">{m.label}</div>
+                        <div className="bcbar-row">
+                          <span className="bcbar-month">พ.ค.</span>
+                          <div className="bcbar-track"><div className="bcbar-fill bcbar-fill-may" style={{width: pct(d[m.key].may) + '%'}} /></div>
+                          <span className="bcbar-val tnum">{fmt1(d[m.key].may)}%</span>
+                        </div>
+                        <div className="bcbar-row">
+                          <span className="bcbar-month">มิ.ย.</span>
+                          <div className="bcbar-track"><div className={`bcbar-fill bcbar-fill-${trend}`} style={{width: pct(d[m.key].jun) + '%'}} /></div>
+                          <span className="bcbar-val tnum">{fmt1(d[m.key].jun)}%</span>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BkkRegionSection({ dcs }) {
+  const [cat, setCat] = React.useState('total');
+
+  const groups = React.useMemo(() => {
+    const bkkDCs = dcs.filter(d => d.region === 'bkk');
+    const regDCs = dcs.filter(d => d.region !== 'bkk' && d.region !== 'other');
+    const avgMode = (list, mode) => {
+      const mayVals = list.map(d => d[cat][mode].may).filter(v => v != null);
+      const junVals = list.map(d => d[cat][mode].jun).filter(v => v != null);
+      return {
+        may: mayVals.length ? Math.round(mayVals.reduce((s, v) => s + v, 0) / mayVals.length * 10) / 10 : null,
+        jun: junVals.length ? Math.round(junVals.reduce((s, v) => s + v, 0) / junVals.length * 10) / 10 : null,
+      };
+    };
+    return {
+      bkk: { count: bkkDCs.length, label: 'กรุงเทพและปริมณฑล', all: avgMode(bkkDCs, 'all'), exCust: avgMode(bkkDCs, 'exCust') },
+      reg: { count: regDCs.length, label: 'ภูมิภาค', all: avgMode(regDCs, 'all'), exCust: avgMode(regDCs, 'exCust') },
+    };
+  }, [dcs, cat]);
+
+  return (
+    <div className="bkk-section">
+      <div className="subsec-head">
+        <span className="subsec-title">กรุงเทพ vs ภูมิภาค</span>
+        <Segmented value={cat} onChange={setCat} options={[
+          {key:'total',label:'รวม'},{key:'general',label:'ทั่วไป'},{key:'cold',label:'Cold Chain'}
+        ]} />
+      </div>
+      <div className="bkk-grid">
+        {['bkk', 'reg'].map(key => {
+          const g = groups[key];
+          return (
+            <div key={key} className="bkkcard">
+              <div className="bkkcard-head">
+                <span className="bkkcard-title">{g.label}</span>
+                <span className="bkkcard-cnt">{g.count} DC</span>
+              </div>
+              <div className="bkkcard-body">
+                {[{mode:'all',label:'ทุกสาเหตุ'},{mode:'exCust',label:'ตัดสาเหตุลูกค้า'}].map(m => (
+                  <div key={m.mode} className="bkkrow">
+                    <div className="bkkrow-label">{m.label}</div>
+                    <div className="bkkrow-data">
+                      <span className="tnum bkkrow-jun">{fmt1(g[m.mode].jun)}%</span>
+                      <Delta may={g[m.mode].may} jun={g[m.mode].jun} size="sm" />
+                      <span className="bkkrow-may muted">พ.ค. {fmt1(g[m.mode].may)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function OvMetric({ label, data }) {
   return (
     <div className="ovmetric">
@@ -752,7 +919,7 @@ function MatrixTable({ overview }) {
   );
 }
 
-function Overview({ layout, overview }) {
+function Overview({ layout, overview, dcs }) {
   return (
     <div>
       <div className="section-head">
@@ -770,6 +937,8 @@ function Overview({ layout, overview }) {
       {layout === "cards" && <div className="kpi-grid">{['total','general','cold'].map((c) => <KpiCard key={c} cat={c} overview={overview} />)}</div>}
       {layout === "split" && <div className="split-grid"><SplitColumn mode="all" overview={overview} /><SplitColumn mode="exCust" overview={overview} /></div>}
       {layout === "matrix" && <MatrixTable overview={overview} />}
+      <BarChartSection overview={overview} />
+      {dcs && dcs.length > 0 && <BkkRegionSection dcs={dcs} />}
     </div>
   );
 }
@@ -903,6 +1072,54 @@ function ByDC({ dcs }) {
 
 // ─── Analysis tab ─────────────────────────────────────────────────────────────
 
+function Top5Section({ dcs, cat }) {
+  const top5 = React.useMemo(() => {
+    return [...dcs]
+      .filter(dc => dc[cat] && dc[cat].all.jun != null)
+      .map(dc => ({
+        dc,
+        jun: dc[cat].all.jun,
+        may: dc[cat].all.may,
+        exJun: dc[cat].exCust.jun,
+        trend: trendOf(dc[cat].all.may, dc[cat].all.jun),
+      }))
+      .sort((a, b) => b.jun - a.jun)
+      .slice(0, 5);
+  }, [dcs, cat]);
+
+  if (!top5.length) return null;
+  const minBar = Math.min(95, ...top5.map(r => r.jun)) - 1;
+
+  return (
+    <div className="top5-section">
+      <div className="subsec-head">
+        <span className="subsec-title">5 อันดับ DC ที่ SLA ดีที่สุด</span>
+        <span className="muted" style={{fontSize:12}}>ทุกสาเหตุ มิ.ย.</span>
+      </div>
+      <div className="top5-list">
+        {top5.map((r, i) => (
+          <div key={r.dc.code} className="top5row">
+            <div className={`top5-medal medal-${i < 3 ? i + 1 : 'n'}`}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </div>
+            <div className="top5-dc-name">{r.dc.name}</div>
+            <div className="top5-bar-area">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: Math.max(3, (r.jun - minBar) / (100 - minBar) * 100) + '%'}} />
+              </div>
+              <div className="top5-metrics">
+                <span className="tnum top5-jun">{fmt1(r.jun)}%</span>
+                <Delta may={r.may} jun={r.jun} size="sm" />
+                <span className="top5-exlab">ตัดลูกค้า {fmt1(r.exJun)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Analysis({ dcs }) {
   const [cat, setCat] = React.useState("total");
   const [topN, setTopN] = React.useState(10);
@@ -996,6 +1213,7 @@ function Analysis({ dcs }) {
           <li>เทียบ <b>ทุกสาเหตุ</b> กับ <b>ตัดสาเหตุลูกค้า</b> เพื่อแยกว่าปัญหามาจากกระบวนการภายในหรือจากฝั่งลูกค้า</li>
         </ul>
       </div>
+      <Top5Section dcs={dcs} cat={cat} />
     </div>
   );
 }
@@ -1100,7 +1318,7 @@ function App() {
         )}
         {status === "done" && slaData && (
           <>
-            {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} />}
+            {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} dcs={slaData.dcs} />}
             {tab === "bydc" && <ByDC dcs={slaData.dcs} />}
             {tab === "analysis" && <Analysis dcs={slaData.dcs} />}
           </>
