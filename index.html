@@ -924,8 +924,8 @@ function Overview({ layout, overview, dcs }) {
     <div>
       <div className="section-head">
         <div>
-          <h2 className="section-title">ภาพรวมเครือข่าย</h2>
-          <p className="section-desc">เปรียบเทียบ SLA เดือนพฤษภาคม → มิถุนายน 2569 · ถ่วงน้ำหนักตามปริมาณออเดอร์</p>
+          <h2 className="section-title">ภาพรวมทุกสาขา</h2>
+          <p className="section-desc">เปรียบเทียบ SLA เดือนพฤษภาคม → มิถุนายน 2569</p>
         </div>
         <div className="trend-legend">
           <span className="legend-item"><span className="dot dot-up" />ดีขึ้น</span>
@@ -937,7 +937,6 @@ function Overview({ layout, overview, dcs }) {
       {layout === "cards" && <div className="kpi-grid">{['total','general','cold'].map((c) => <KpiCard key={c} cat={c} overview={overview} />)}</div>}
       {layout === "split" && <div className="split-grid"><SplitColumn mode="all" overview={overview} /><SplitColumn mode="exCust" overview={overview} /></div>}
       {layout === "matrix" && <MatrixTable overview={overview} />}
-      <BarChartSection overview={overview} />
       {dcs && dcs.length > 0 && <BkkRegionSection dcs={dcs} />}
     </div>
   );
@@ -1133,15 +1132,6 @@ function Analysis({ dcs }) {
     }).sort((x, y) => x.all.jun - y.all.jun);
   }, [cat, dcs]);
 
-  const stats = React.useMemo(() => {
-    if (!all.length) return {};
-    const lowest = all[0];
-    const declinedCount = all.filter((r) => r.trend === "down").length;
-    const improvedCount = all.filter((r) => r.trend === "up").length;
-    const worstDrop = all.reduce((m, r) => r.delta < m.delta ? r : m, all[0]);
-    return { lowest, declinedCount, improvedCount, worstDrop };
-  }, [all]);
-
   const ranked = topN >= 9999 ? all : all.slice(0, topN);
   const minVal = all.length ? Math.min(79, ...all.map((r) => r.all.jun)) - 1 : 79;
 
@@ -1151,25 +1141,6 @@ function Analysis({ dcs }) {
         <div>
           <h2 className="section-title">วิเคราะห์ &amp; จัดลำดับความเร่งด่วน</h2>
           <p className="section-desc">DC ที่มี SLA เดือนมิถุนายน (ทุกสาเหตุ) ต่ำสุด เรียงจากน้อยไปมาก — เน้น DC ที่ค่าลดลงจากเดือน พ.ค.</p>
-        </div>
-      </div>
-
-      <div className="stat-strip">
-        <div className="stat-box stat-fail">
-          <div className="stat-num tnum">{stats.lowest ? fmt1(stats.lowest.all.jun) : "–"}%</div>
-          <div className="stat-lab">SLA ต่ำสุด มิ.ย.<br /><span className="muted">{stats.lowest?.dc.name || "–"}</span></div>
-        </div>
-        <div className="stat-box stat-critical">
-          <div className="stat-num tnum">{stats.declinedCount ?? "–"}</div>
-          <div className="stat-lab">DC ที่ SLA ลดลง<br /><span className="muted">เทียบกับ พ.ค.</span></div>
-        </div>
-        <div className="stat-box stat-ok">
-          <div className="stat-num tnum">{stats.improvedCount ?? "–"}</div>
-          <div className="stat-lab">DC ที่ดีขึ้น<br /><span className="muted">เทียบกับ พ.ค.</span></div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-num tnum">{stats.worstDrop ? fmtDelta(stats.worstDrop.delta) : "–"}</div>
-          <div className="stat-lab">ลดลงมากสุด<br /><span className="muted">{stats.worstDrop?.dc.name || "–"}</span></div>
         </div>
       </div>
 
@@ -1213,7 +1184,69 @@ function Analysis({ dcs }) {
           <li>เทียบ <b>ทุกสาเหตุ</b> กับ <b>ตัดสาเหตุลูกค้า</b> เพื่อแยกว่าปัญหามาจากกระบวนการภายในหรือจากฝั่งลูกค้า</li>
         </ul>
       </div>
-      <Top5Section dcs={dcs} cat={cat} />
+    </div>
+  );
+}
+
+// ─── Top Rank tab ─────────────────────────────────────────────────────────────
+
+function TopRank({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+
+  const top10 = React.useMemo(() => {
+    return [...dcs]
+      .filter(dc => dc[cat] && dc[cat].all.jun != null)
+      .map(dc => ({
+        dc,
+        jun: dc[cat].all.jun,
+        may: dc[cat].all.may,
+        exJun: dc[cat].exCust.jun,
+        trend: trendOf(dc[cat].all.may, dc[cat].all.jun),
+      }))
+      .sort((a, b) => b.jun - a.jun)
+      .slice(0, 10);
+  }, [dcs, cat]);
+
+  const minBar = top10.length ? Math.min(95, ...top10.map(r => r.jun)) - 1 : 90;
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">10 อันดับ DC ที่ SLA ดีที่สุด</h2>
+          <p className="section-desc">DC ที่มี SLA ทุกสาเหตุ เดือนมิถุนายน สูงสุด เรียงจากมากไปน้อย</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[
+            {key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}
+          ]} />
+        </div>
+      </div>
+
+      <div className="top5-list">
+        {top10.map((r, i) => (
+          <div key={r.dc.code} className="top5row">
+            <div className={`top5-medal medal-${i < 3 ? i + 1 : 'n'}`}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </div>
+            <div className="top5-dc-name">{r.dc.name}</div>
+            <div className="top5-bar-area">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: Math.max(3, (r.jun - minBar) / (100 - minBar) * 100) + '%'}} />
+              </div>
+              <div className="top5-metrics">
+                <span className="tnum top5-jun">{fmt1(r.jun)}%</span>
+                <Delta may={r.may} jun={r.jun} size="sm" />
+                <span className="top5-exlab">ตัดลูกค้า {fmt1(r.exJun)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1221,7 +1254,7 @@ function Analysis({ dcs }) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 const TWEAK_DEFAULTS = { overviewLayout: "rows", accent: "#1f5fb0", density: "regular" };
-const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "bydc", th: "ราย DC" }, { key: "analysis", th: "วิเคราะห์" }];
+const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "bydc", th: "ราย DC" }, { key: "analysis", th: "วิเคราะห์" }, { key: "top", th: "Top 10" }];
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -1321,6 +1354,7 @@ function App() {
             {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} dcs={slaData.dcs} />}
             {tab === "bydc" && <ByDC dcs={slaData.dcs} />}
             {tab === "analysis" && <Analysis dcs={slaData.dcs} />}
+            {tab === "top" && <TopRank dcs={slaData.dcs} />}
           </>
         )}
       </main>
