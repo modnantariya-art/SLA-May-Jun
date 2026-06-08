@@ -65,6 +65,7 @@ body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size
 .refresh-icon.spinning{animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .last-updated{font-size:11.5px;color:var(--faint);}
+.data-date{font-size:11.5px;color:var(--muted);font-weight:500;}
 
 /* tabs */
 .tabs{max-width:1200px;margin:0 auto;padding:0 var(--pad);display:flex;gap:4px;}
@@ -608,7 +609,22 @@ async function loadSLAData(sheetId) {
     cold: cc.grandTotal,
   };
 
-  return { dcs, overview, loadedAt: new Date() };
+  return { dcs, overview, loadedAt: new Date(), dataDate: readDataDate(totCSV) };
+}
+
+function readDataDate(csvText) {
+  const rows = parseCSV(csvText);
+  if (!rows.length) return null;
+  // Scan first 3 rows for a cell containing Thai date keywords
+  for (let i = 0; i < Math.min(3, rows.length); i++) {
+    for (let j = 0; j < rows[i].length; j++) {
+      const cell = rows[i][j];
+      if (cell && (cell.includes('ณ') || cell.includes('มิ.ย') || cell.includes('มิถุนายน') || cell.includes('as of') || cell.includes('As of'))) {
+        return cell.trim();
+      }
+    }
+  }
+  return null;
 }
 
 // ─── Tweaks panel ─────────────────────────────────────────────────────────────
@@ -1442,6 +1458,7 @@ function App() {
             <div className="period">
               <span className="period-label">รอบเปรียบเทียบ</span>
               <span className="period-val">พ.ค. <span className="period-arrow">→</span> มิ.ย. 2569</span>
+              {slaData?.dataDate && <span className="data-date">{slaData.dataDate}</span>}
             </div>
           </div>
         </div>
