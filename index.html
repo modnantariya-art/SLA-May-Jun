@@ -509,7 +509,7 @@ function parseSheetRows(csvText) {
   let dcStart = -1;
   for (let i = 0; i < rows.length; i++) {
     const cell = rows[i][1];
-    if (cell === 'DC' || cell === '"DC"') { dcStart = i + 2; break; }
+    if (cell === 'DC' || cell === '"DC"') { dcStart = i + 1; break; }
   }
 
   const dcs = [];
@@ -522,7 +522,7 @@ function parseSheetRows(csvText) {
       const mayEx = toPercent(r[3]);
       const junAll = toPercent(r[4]);
       const junEx = toPercent(r[5]);
-      if (mayAll == null || junAll == null) continue;
+      if (junAll == null) continue;
       dcs.push({ name, all: { may: mayAll, jun: junAll }, exCust: { may: mayEx ?? mayAll, jun: junEx ?? junAll } });
     }
   }
@@ -540,10 +540,10 @@ async function fetchSheet(sheetId, sheetName) {
 // Province → region mapping
 const PROVINCE_REGION = {
   'CDC บางนา':'bkk','DC รังสิต':'bkk','DC พุทธมณฑลสาย 3':'bkk',
-  'DC นครปฐม':'central','DC สมุทรสาคร':'west','DC สระบุรี':'central',
+  'DC นครปฐม':'west','DC สมุทรสาคร':'west','DC สระบุรี':'central',
   'DC ราชบุรี':'west','DC ลพบุรี':'central','DC อยุธยา':'central',
   'DC ชะอำ':'west','DC ชัยนาท':'north','DC สุพรรณบุรี':'central',
-  'DC ลพบุรี':'central','DC พัทยา':'east','DC ชลบุรี':'east',
+  'DC พัทยา':'east','DC ชลบุรี':'east',
   'DC ระยอง':'east','DC ฉะเชิงเทรา':'east','DC ปราจีนบุรี':'east',
   'DC จันทบุรี':'east','DC ปากช่อง':'east',
   'DC กาญจนบุรี':'west',
